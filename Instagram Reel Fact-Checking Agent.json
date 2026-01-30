@@ -1,0 +1,703 @@
+{
+  "name": "Instagram Reel Fact-Checking and Authenticity Verification (Fixed) copy",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "reelUrl",
+              "value": "={{ $json.reelUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31c469b1-9ed1-4732-b7d0-b5197850bc48",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3424,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/apify~instagram-reel-scraper/run-sync-get-dataset-items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer apify_api_Fb7bnYlURug6FGwKsFkISA4JufpXUW08e2I5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"username\": [\n    \"{{ $json.reelUrl }}\"\n  ],\n  \"resultsLimit\": 1\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "fbf9f006-422a-453b-8c2c-dae13dfa1979",
+      "name": "Download Instagram Reel (Apify metadata)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3648,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Try common media URL fields\nconst mediaUrl = item.videoUrl || item.video_url || item.displayUrl || item.display_url || item.url;\n\nif (!mediaUrl) {\n  throw new Error('No media URL found in Apify output. Open Apify output JSON and update this mapping (videoUrl/displayUrl/url).');\n}\n\nreturn [{\n  reelUrl: $node['Workflow Configuration'].json.reelUrl,\n  timestamp: $node['Workflow Configuration'].json.timestamp,\n  mediaUrl,\n  apifyRaw: item\n}];"
+      },
+      "id": "92a13a4f-5580-4784-a181-0419a6063ed1",
+      "name": "Extract Media URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3872,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.mediaUrl}}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "da721eee-4439-4948-bd55-22ea5e58f4d5",
+      "name": "Download Reel Media (File)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4096,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v2/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "84b1be2b44884298abb2de7c38f475ca"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "4dc1582c-5858-403a-a3de-d1f97c8d3934",
+      "name": "AssemblyAI: Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4320,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v2/transcript",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=84b1be2b44884298abb2de7c38f475ca"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"audio_url\": \"{{ $json.upload_url }}\",\n  \"punctuate\": true\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "c4b9757d-243e-4c33-93bb-ac6cb310a1a0",
+      "name": "AssemblyAI: Create Transcript",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4544,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "34edddbb-01c6-46cf-a4dc-0528e797dc23",
+      "name": "Wait (poll)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        3008,
+        1120
+      ],
+      "webhookId": "6f6ce27e-2c8e-4bf7-905f-b20ea4c85aaf"
+    },
+    {
+      "parameters": {
+        "url": "={{'https://api.assemblyai.com/v2/transcript/' + $json.id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=84b1be2b44884298abb2de7c38f475ca"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "193865b3-634f-4875-9a2d-50c7d877d8e9",
+      "name": "AssemblyAI: Get Transcript",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3216,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c0054a0d-ecb5-42b4-97b3-bf79900ec6d7",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "queued,processing",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c39d1669-22d2-45d1-929f-2a7fe99e7ec6",
+      "name": "If Not Completed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "reelUrl",
+              "value": "={{$node['Workflow Configuration'].json.reelUrl}}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "text",
+              "value": "={{$json.text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "af709a1f-7d83-4373-b8f9-0c5996fd1554",
+      "name": "Transcript (final)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3632,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "c1e0c8ce-2f89-4ca3-8ded-69a8d0c28e6f",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3744,
+        1376
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "yJMh88mmJOCYGywM",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "55dc82b2-5a83-4a81-8d00-b2fc821600a1",
+      "name": "Google Search Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        3904,
+        1376
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "smY7x8vnbdumedI5",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"claims\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"claim\": {\"type\": \"string\"},\n          \"verdict\": {\"type\": \"string\"},\n          \"confidence\": {\"type\": \"number\"},\n          \"sources\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n          \"reasoning\": {\"type\": \"string\"}\n        }\n      }\n    },\n    \"overallAuthenticityScore\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 100},\n    \"summary\": {\"type\": \"string\"},\n    \"recommendation\": {\"type\": \"string\"}\n  }\n}"
+      },
+      "id": "89d91274-fde2-472f-8bc5-9bb0c494c24c",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4064,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following transcript from an Instagram Reel and fact-check all claims:\n\n{{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a fact-checking expert specialized in verifying claims from social media content.\n- Identify factual claims.\n- Use Google Search tool to look up the actual facts on multiple trusted platforms and the brand's websites\n- Verdicts: TRUE/FALSE/PARTIALLY_TRUE/UNVERIFIABLE.\n- Provide comprehensive reasoning for the verdicts, and sources that are clickable urls links.\n- Output must match the structured schema."
+        }
+      },
+      "id": "01f871e9-fa8a-45d6-98a3-7c314b6e618f",
+      "name": "Fact-Checking AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3840,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "reelUrl",
+              "value": "={{$node['Workflow Configuration'].json.reelUrl}}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "transcript",
+              "value": "={{$node['Transcript (final)'].json.text}}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "authenticityScore",
+              "value": "={{ $json.output.overallAuthenticityScore }}",
+              "type": "number"
+            },
+            {
+              "id": "id-4",
+              "name": "claims",
+              "value": "={{ $json.output.claims }}",
+              "type": "array"
+            },
+            {
+              "id": "id-5",
+              "name": "summary",
+              "value": "={{ $json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "recommendation",
+              "value": "={{ $json.output.recommendation }}",
+              "type": "string"
+            },
+            {
+              "id": "id-7",
+              "name": "checkedAt",
+              "value": "={{$node['Workflow Configuration'].json.timestamp}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "49a3a144-622a-4184-b929-13c883afbb53",
+      "name": "Format Final Report",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4144,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reel-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2976,
+        896
+      ],
+      "id": "af37f671-f71e-4384-af7a-282ca35d7fb4",
+      "name": "Webhook",
+      "webhookId": "dbd8a50c-54a9-4684-b4e2-b05e1ef00aa7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "876de24c-a995-42ab-929b-24075839eca7",
+              "name": "reelUrl",
+              "value": "={{$json.body.reelUrl}}",
+              "type": "string"
+            },
+            {
+              "id": "ee3aff14-9864-4f7e-870e-84e1f8fded38",
+              "name": "timestamp",
+              "value": "={{$now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3200,
+        896
+      ],
+      "id": "492516f4-3582-4e3e-9f03-93aec7745020",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json.body}}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4592,
+        1136
+      ],
+      "id": "59cc297e-7660-4161-9f02-b2ff41afa7cb",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $input.first().json; // Format Final Report output\n\nconst esc = (s) => String(s ?? \"\")\n  .replaceAll(\"&\", \"&amp;\")\n  .replaceAll(\"<\", \"&lt;\")\n  .replaceAll(\">\", \"&gt;\")\n  .replaceAll('\"', \"&quot;\")\n  .replaceAll(\"'\", \"&#039;\");\n\nconst isUrl = (s) => /^https?:\\/\\/\\S+$/i.test(String(s ?? \"\").trim());\n\nconst asLink = (s) => {\n  const t = String(s ?? \"\").trim();\n  if (!t) return \"\";\n  if (!isUrl(t)) return `<span class=\"srcText\">${esc(t)}</span>`;\n  return `<a class=\"srcLink\" href=\"${esc(t)}\" target=\"_blank\" rel=\"noreferrer noopener\">${esc(t)}</a>`;\n};\n\nconst normalizeVerdict = (vRaw) => {\n  const v = String(vRaw ?? \"\").toUpperCase().trim();\n  if (v === \"TRUE\") return \"TRUE\";\n  if (v === \"FALSE\") return \"FALSE\";\n  if (v === \"PARTIALLY_TRUE\" || v === \"PARTIALLY TRUE\") return \"PARTIALLY_TRUE\";\n  if (v === \"UNVERIFIABLE\") return \"UNVERIFIABLE\";\n  // fallback\n  if (v.includes(\"PART\")) return \"PARTIALLY_TRUE\";\n  if (v.includes(\"UNVER\")) return \"UNVERIFIABLE\";\n  if (v.includes(\"FALS\")) return \"FALSE\";\n  if (v.includes(\"TRUE\")) return \"TRUE\";\n  return \"UNVERIFIABLE\";\n};\n\nconst verdictStyle = (v) => {\n  switch (v) {\n    case \"TRUE\":\n      return { label: \"TRUE\", fg: \"#166534\", bg: \"#dcfce7\", border: \"#22c55e\" };\n    case \"FALSE\":\n      return { label: \"FALSE\", fg: \"#991b1b\", bg: \"#fee2e2\", border: \"#ef4444\" };\n    case \"PARTIALLY_TRUE\":\n      return { label: \"PARTIALLY TRUE\", fg: \"#92400e\", bg: \"#fef3c7\", border: \"#f59e0b\" };\n    default:\n      return { label: \"UNVERIFIABLE\", fg: \"#374151\", bg: \"#e5e7eb\", border: \"#9ca3af\" };\n  }\n};\n\nconst claims = Array.isArray(out.claims) ? out.claims : [];\nconst total = claims.length;\nconst trueCount = claims.filter(c => normalizeVerdict(c.verdict) === \"TRUE\").length;\n\nconst claimCards = claims.map((c, i) => {\n  const v = normalizeVerdict(c.verdict);\n  const st = verdictStyle(v);\n\n  const why = String(c.reasoning ?? \"\").trim();\n  const whyHtml = `\n    <div class=\"why\">\n      <span class=\"label\">Why:</span>\n      <div class=\"whyText\">${esc(why || \"No explanation was provided for this claim.\")}</div>\n    </div>\n  `;\n\n  const sources = Array.isArray(c.sources) ? c.sources.filter(Boolean) : [];\n  const sourcesHtml = sources.length\n    ? `\n      <div class=\"sources\">\n        <span class=\"label\">Sources:</span>\n        <div class=\"srcList\">${sources.map(asLink).filter(Boolean).join(\" • \")}</div>\n      </div>\n    `\n    : `\n      <div class=\"sources\">\n        <span class=\"label\">Sources:</span>\n        <span class=\"srcText\">None provided</span>\n      </div>\n    `;\n\n  return `\n    <div class=\"claimCard\">\n      <div class=\"claimTop\">\n        <div class=\"claimNum\">#${i + 1}</div>\n        <div class=\"badge\" style=\"background:${st.bg};color:${st.fg};border-color:${st.border};\">\n          ${st.label}\n        </div>\n      </div>\n\n      <div class=\"claimText\">${esc(c.claim ?? \"\")}</div>\n      ${whyHtml}\n      ${sourcesHtml}\n    </div>\n  `;\n}).join(\"\");\n\nconst body = `<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\"/>\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>\n  <title>Reel Authenticity Report</title>\n  <style>\n    body{\n      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;\n      background:#f6f7fb; margin:0; padding:24px; color:#0f172a;\n    }\n    .wrap{max-width:920px;margin:0 auto;}\n    .header{\n      background:#ffffff; border:1px solid #e5e7eb; border-radius:16px;\n      padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.06);\n    }\n    h1{margin:0 0 10px;font-size:28px;}\n    .scoreRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}\n    .scoreBox{\n      display:flex; align-items:baseline; gap:10px;\n      padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;\n      background:#f8fafc;\n    }\n    .scoreNum{font-size:28px;font-weight:900;color:#2563eb;}\n    .scoreMeta{font-size:13px;color:#475569;font-weight:700;}\n    .subtitle{color:#64748b;margin:10px 0 0;font-size:13px;line-height:1.35;}\n    .legend{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}\n    .legend .pill{font-size:12px;font-weight:900;border-radius:999px;padding:6px 10px;border:1px solid #e5e7eb;background:#fff;color:#334155}\n    .claimsWrap{margin-top:14px;}\n    .claimCard{\n      background:#ffffff; border:1px solid #e5e7eb; border-radius:14px;\n      padding:14px; margin:12px 0; box-shadow:0 6px 18px rgba(0,0,0,.04);\n    }\n    .claimTop{display:flex;align-items:center;gap:10px;}\n    .claimNum{font-weight:900;color:#0f172a;background:#f1f5f9;border-radius:999px;padding:4px 10px;font-size:12px;}\n    .badge{\n      font-weight:900; font-size:12px; padding:6px 10px; border-radius:999px;\n      border:1px solid;\n    }\n    .claimText{margin-top:10px;font-size:15px;font-weight:800;line-height:1.35;}\n    .label{font-weight:900;color:#334155;}\n    .why, .sources{margin-top:10px;color:#334155;font-size:13px;line-height:1.4;}\n    .whyText{margin-top:6px;white-space:pre-wrap;}\n    .srcList{margin-top:6px;}\n    .srcLink{color:#2563eb;text-decoration:underline;word-break:break-all;}\n    .srcText{color:#334155;}\n    @media (max-width: 720px){\n      body{padding:14px;}\n      h1{font-size:22px;}\n      .scoreNum{font-size:22px;}\n    }\n  </style>\n</head>\n\n<body>\n  <div class=\"wrap\">\n    <div class=\"header\">\n      <h1>🎬 Reel Authenticity Report</h1>\n\n      <div class=\"scoreRow\">\n        <div class=\"scoreBox\">\n          <div class=\"scoreNum\">${trueCount}</div>\n          <div class=\"scoreMeta\">\n            out of ${total} claimed facts are true\n          </div>\n        </div>\n      </div>\n\n      <div class=\"subtitle\">\n        Score counts only <b>TRUE</b> facts as correct. <b>FALSE</b>, <b>PARTIALLY TRUE</b>, and <b>UNVERIFIABLE</b> are not counted as correct.\n      </div>\n\n      <div class=\"legend\">\n        <span class=\"pill\">✅ TRUE</span>\n        <span class=\"pill\">🟡 PARTIALLY TRUE</span>\n        <span class=\"pill\">❌ FALSE</span>\n        <span class=\"pill\">⚪ UNVERIFIABLE</span>\n      </div>\n    </div>\n\n    <div class=\"claimsWrap\">\n      ${claimCards || `<div class=\"header\" style=\"margin-top:14px;\">No claims found.</div>`}\n    </div>\n  </div>\n</body>\n</html>`;\n\nreturn [{ ...out, body }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4368,
+        1136
+      ],
+      "id": "af5cf4bb-c3dd-49dd-9343-cdbc43efb4ef",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Download Instagram Reel (Apify metadata)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Instagram Reel (Apify metadata)": {
+      "main": [
+        [
+          {
+            "node": "Extract Media URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Media URL": {
+      "main": [
+        [
+          {
+            "node": "Download Reel Media (File)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Reel Media (File)": {
+      "main": [
+        [
+          {
+            "node": "AssemblyAI: Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AssemblyAI: Upload": {
+      "main": [
+        [
+          {
+            "node": "AssemblyAI: Create Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AssemblyAI: Create Transcript": {
+      "main": [
+        [
+          {
+            "node": "Wait (poll)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (poll)": {
+      "main": [
+        [
+          {
+            "node": "AssemblyAI: Get Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AssemblyAI: Get Transcript": {
+      "main": [
+        [
+          {
+            "node": "If Not Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Not Completed": {
+      "main": [
+        [
+          {
+            "node": "Wait (poll)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Transcript (final)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcript (final)": {
+      "main": [
+        [
+          {
+            "node": "Fact-Checking AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Fact-Checking AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Fact-Checking AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Fact-Checking AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fact-Checking AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Final Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Final Report": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "38707e37-4281-4c9a-bf2f-639d73cf44f7",
+  "meta": {
+    "instanceId": "5d1f84262091ae446bd16ee70fefb75846027ce0aad1909bb2adfdc275f8a013"
+  },
+  "id": "W1Yod26v3DQ0bbFN",
+  "tags": []
+}
