@@ -281,8 +281,8 @@
       ],
       "credentials": {
         "openAiApi": {
-          "id": "yJMh88mmJOCYGywM",
-          "name": "n8n free OpenAI API credits"
+          "id": "",
+          "name": ""
         }
       }
     },
@@ -300,8 +300,8 @@
       ],
       "credentials": {
         "serpApi": {
-          "id": "smY7x8vnbdumedI5",
-          "name": "SerpAPI account"
+          "id": "",
+          "name": ""
         }
       }
     },
