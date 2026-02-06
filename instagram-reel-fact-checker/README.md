@@ -1,10 +1,3 @@
-Below is a **ready-to-drop `README.md`** you can put next to the workflow JSON.
-It’s written for **n8n users** who want to understand *what this workflow does*, *how each node works*, and *how to reuse it safely*.
-
-I’ve explicitly aligned the explanations with the actual nodes and connections in your workflow .
-
----
-
 # Fact-Checking Agent for Instagram Reels — Built on n8n
 
 This repository contains an **n8n workflow** that takes an **Instagram Reel URL**, extracts the audio, transcribes it, identifies factual claims, verifies them using live web search, and generates a **human-readable authenticity report**.
