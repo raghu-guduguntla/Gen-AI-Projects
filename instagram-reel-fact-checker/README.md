@@ -5,7 +5,7 @@ I’ve explicitly aligned the explanations with the actual nodes and connections
 
 ---
 
-# Autonomous Fact-Checking Agent for Instagram Reels — Built on n8n
+# Fact-Checking Agent for Instagram Reels — Built on n8n
 
 This repository contains an **n8n workflow** that takes an **Instagram Reel URL**, extracts the audio, transcribes it, identifies factual claims, verifies them using live web search, and generates a **human-readable authenticity report**.
 
